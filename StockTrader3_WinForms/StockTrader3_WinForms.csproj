@@ -124,6 +124,7 @@
     </Compile>
     <Compile Include="Managers\DatabaseManager.cs" />
     <Compile Include="Managers\KiwoomApiManager.cs" />
+    <Compile Include="Managers\PriceCorrector.cs" />
     <Compile Include="Managers\ProgressManager.cs" />
     <Compile Include="Managers\StatusManager.cs" />
     <Compile Include="Models\DailyPrice.cs" />
