@@ -1007,7 +1007,7 @@ namespace StockTrader3_WinForms
         /// <param name="stockCode">종목코드</param>
         /// <param name="days">조회 일수</param>
         /// <returns>일봉 데이터 리스트</returns>
-        public async Task<List<StockTrader3.Models.DailyPrice>> GetHistoricalDataViaOPT10081Async(string stockCode, int days = 60)
+        public async Task<List<StockTrader3.Models.DailyPrice>> GetHistoricalDataViaOPT10081Async(string stockCode, int days = 240)
         {
             try
             {
@@ -1138,7 +1138,7 @@ namespace StockTrader3_WinForms
         /// <param name="minuteInterval">분봉 간격 (1, 3, 5, 15, 30, 60)</param>
         /// <param name="days">조회 일수</param>
         /// <returns>분봉 데이터 리스트</returns>
-        public async Task<List<StockTrader3.Models.MinutePrice>> GetMinuteDataViaOPT10080Async(string stockCode, int minuteInterval = 1, int days = 3)
+        public async Task<List<StockTrader3.Models.MinutePrice>> GetMinuteDataViaOPT10080Async(string stockCode, int minuteInterval = 1, int days = 5)
         {
             try
             {

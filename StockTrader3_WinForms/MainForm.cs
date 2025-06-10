@@ -1781,10 +1781,6 @@ namespace StockTrader3_WinForms
             }
         }
 
-
-        // MainForm.cs의 UpdateStockListDisplay 메서드 수정
-
-        // MainForm.cs의 UpdateStockListDisplay 메서드 수정 (종목코드 제거)
         private async Task UpdateStockListDisplay()
         {
             try
@@ -1792,25 +1788,25 @@ namespace StockTrader3_WinForms
                 DateTime today = _databaseManager.GetLastTradingDay();
                 var searchResults = await _databaseManager.GetConditionSearchResultsAsync(today);
 
+                // --- 정렬 코드 추가 ---
+                var sortedResults = searchResults.OrderByDescending(s => s.ChangeRate).ToList();
+                // --- 추가 끝 ---
+
                 dgvStockList.Rows.Clear();
 
-                foreach (var stock in searchResults)
+                // 반복 대상을 정렬된 리스트(sortedResults)로 변경
+                foreach (var stock in sortedResults)
                 {
                     var row = dgvStockList.Rows[dgvStockList.Rows.Add()];
 
-                    // ✅ 종목코드 컬럼 제거, 종목명부터 시작
                     row.Cells["StockName"].Value = stock.StockName;
                     row.Cells["ClosePrice"].Value = stock.ClosePrice;
-
-                    // 전일대비 표시 (현재가와 시가 사이)
                     row.Cells["ChangeAmount"].Value = stock.ChangeAmount;
                     row.Cells["OpenPrice"].Value = stock.OpenPrice;
                     row.Cells["HighPrice"].Value = stock.HighPrice;
                     row.Cells["LowPrice"].Value = stock.LowPrice;
-
                     row.Cells["ChangeRate"].Value = stock.ChangeRate;
                     row.Cells["Volume"].Value = stock.Volume;
-
                     row.Cells["TechnicalScore"].Value = stock.TechnicalScore?.ToString() ?? "";
                     row.Cells["FinalScore"].Value = stock.FinalScore?.ToString() ?? "";
                     row.Cells["FinalGrade"].Value = stock.FinalGrade ?? "";
@@ -1818,31 +1814,25 @@ namespace StockTrader3_WinForms
                     row.Cells["SellPrice"].Value = stock.SellPrice?.ToString("N0") ?? "";
                     row.Cells["StopLossPrice"].Value = stock.StopLossPrice?.ToString("N0") ?? "";
 
-
-                    // 🆕 분석 타입에 따른 상태 표시
                     string statusText = GetImprovedStatusText(stock.ProcessStatus, stock.AnalysisProgress);
-
-                    // 분봉 분석 여부 확인
                     bool isEnhancedAnalysis = stock.TechnicalScore.HasValue && stock.TechnicalScore.Value >= 70;
 
                     if (stock.TechnicalScore.HasValue)
                     {
                         if (isEnhancedAnalysis)
                         {
-                            statusText = "정밀완료"; // 분봉 + 일봉
+                            statusText = "정밀완료";
                             row.DefaultCellStyle.BackColor = Color.LightGreen;
                         }
                         else
                         {
-                            statusText = "기본완료"; // 일봉만
+                            statusText = "기본완료";
                             row.DefaultCellStyle.BackColor = Color.LightYellow;
                         }
                     }
 
                     row.Cells["Status"].Value = statusText;
 
-
-                    // 전일대비 색상 표시 
                     if (stock.ChangeAmount > 0)
                     {
                         row.Cells["ChangeAmount"].Style.ForeColor = Color.Red;
@@ -1859,7 +1849,6 @@ namespace StockTrader3_WinForms
                         row.Cells["ChangeAmount"].Value = "0";
                     }
 
-                    // 등락률에 따른 색상 표시
                     if (stock.ChangeRate > 0)
                     {
                         row.Cells["ChangeRate"].Style.ForeColor = Color.Red;
@@ -1871,18 +1860,15 @@ namespace StockTrader3_WinForms
                         row.Cells["ClosePrice"].Style.ForeColor = Color.Blue;
                     }
 
-                    // 분석 완료된 경우 추가 컬럼 표시
                     if (stock.TechnicalScore.HasValue)
                     {
                         row.Cells["TechnicalScore"].Value = stock.TechnicalScore;
-                       
                     }
 
                     if (stock.FinalScore.HasValue)
                     {
                         row.Cells["FinalScore"].Value = stock.FinalScore;
                         row.Cells["FinalGrade"].Value = stock.FinalGrade;
-                       
                     }
 
                     if (stock.BuyPrice.HasValue)
@@ -1890,10 +1876,8 @@ namespace StockTrader3_WinForms
                         row.Cells["BuyPrice"].Value = stock.BuyPrice;
                         row.Cells["SellPrice"].Value = stock.SellPrice;
                         row.Cells["StopLossPrice"].Value = stock.StopLossPrice;
-                        
                     }
 
-                    // 등급에 따른 색상 표시
                     if (!string.IsNullOrEmpty(stock.FinalGrade))
                     {
                         switch (stock.FinalGrade)
@@ -1914,14 +1898,13 @@ namespace StockTrader3_WinForms
                     }
                 }
 
-                // 분석 기준일 및 조건식명 업데이트
                 lblAnalysisDate.Text = $"📅 분석기준일: {today:yyyy-MM-dd}";
                 if (cmbConditions.SelectedItem != null)
                 {
                     lblConditionName.Text = $"🔍 조건식: {cmbConditions.SelectedItem}";
                 }
 
-                System.Diagnostics.Debug.WriteLine($"✅ 종목 리스트 업데이트 완료: {searchResults.Count}개 (종목코드 제거)");
+                System.Diagnostics.Debug.WriteLine($"✅ 종목 리스트 업데이트 완료: {searchResults.Count}개 (등락률 정렬됨)");
             }
             catch (Exception ex)
             {
@@ -1929,6 +1912,8 @@ namespace StockTrader3_WinForms
             }
         }
 
+
+      
  
 
         /// <summary>
@@ -2231,8 +2216,8 @@ namespace StockTrader3_WinForms
 
             foreach (var stock in stocks)
             {
-                bool hasDailyData = await _databaseManager.CheckHistoricalDataExistsAsync(stock.StockCode, 30);
-                bool hasMinuteData = await _databaseManager.CheckMinuteHistoricalDataExistsAsync(stock.StockCode, 1, 3);
+                bool hasDailyData = await _databaseManager.CheckHistoricalDataExistsAsync(stock.StockCode, 240);
+                bool hasMinuteData = await _databaseManager.CheckMinuteHistoricalDataExistsAsync(stock.StockCode, 1, 5);
 
                 if (hasDailyData && hasMinuteData)
                 {
@@ -2267,7 +2252,7 @@ namespace StockTrader3_WinForms
                 $"기술 분석을 위해 일부 종목의 과거 데이터가 필요합니다.\n\n" +
                 $"📊 수집 필요 종목: {analysis.NeedsCollectionStocks.Count}개\n" +
                 $"⏱️ 예상 소요 시간: {analysis.EstimatedTimeSeconds}초\n" +
-                $"📈 수집 항목: 일봉 30일 + 분봉 3일\n\n" +
+                $"📈 수집 항목: 일봉 240일 + 분봉 5일\n\n" +
                 $"자동으로 수집하고 정밀 분석을 진행하시겠습니까?\n\n" +
                 $"💡 '아니오' 선택 시 기존 데이터로만 분석합니다.",
                 "기술 분석",
