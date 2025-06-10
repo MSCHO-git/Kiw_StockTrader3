@@ -220,149 +220,147 @@ namespace AutoTrader_WinForms
 
         #region DataGridView 설정
 
+        // MainForm.cs
+
+        // MainForm.cs -> SetupDataGridView 메서드
+
         private void SetupDataGridView()
         {
-            // DataGridView 기본 설정
+            // --- 레이아웃 2차 미세 조정: 컬럼 폭 대폭 증가 ---
             dgvStocks.AutoGenerateColumns = false;
             dgvStocks.Columns.Clear();
+            dgvStocks.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
 
-            // 🆕 체크박스 컬럼 추가 (첫 번째)
             dgvStocks.Columns.Add(new DataGridViewCheckBoxColumn
             {
                 Name = "IsSelected",
                 DataPropertyName = "IsSelected",
                 HeaderText = "선택",
-                Width = 50,
-                ReadOnly = false
+                Width = 40
             });
-
-            // 기존 컬럼들 (크기 조정)
-            dgvStocks.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                Name = "StockCode",
-                DataPropertyName = "StockCode",
-                HeaderText = "코드",
-                Width = 70
-            });
-
             dgvStocks.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "StockName",
                 DataPropertyName = "StockName",
                 HeaderText = "종목명",
-                Width = 100
+                Width = 180 // 폭 크게 증가
             });
-
             dgvStocks.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "FinalGrade",
                 DataPropertyName = "FinalGrade",
                 HeaderText = "등급",
-                Width = 40
+                Width = 60,
+                DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleCenter }
             });
-
             dgvStocks.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "FinalScore",
                 DataPropertyName = "FinalScore",
                 HeaderText = "점수",
-                Width = 50
+                Width = 70
             });
-
             dgvStocks.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "ClosePrice",
                 DataPropertyName = "ClosePrice",
                 HeaderText = "현재가",
-                Width = 70,
+                Width = 90,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N0" }
             });
-
             dgvStocks.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "BuyPrice",
                 DataPropertyName = "BuyPrice",
                 HeaderText = "매수가",
-                Width = 70,
+                Width = 90,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N0" }
             });
-
             dgvStocks.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "SellPrice",
                 DataPropertyName = "SellPrice",
                 HeaderText = "목표가",
-                Width = 70,
+                Width = 90,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N0" }
             });
-
             dgvStocks.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "ExpectedReturn",
                 DataPropertyName = "ExpectedReturn",
                 HeaderText = "예상수익률",
-                Width = 80,
+                Width = 88,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "P2" }
+            });
+            dgvStocks.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "StockCode",
+                DataPropertyName = "StockCode",
+                HeaderText = "코드",
+                Width = 76
             });
         }
 
+  
+
+        // MainForm.cs
+
         private void SetupMonitoringGridView()
         {
+            // --- 레이아웃 미세 조정: 컬럼 폭 수정 ---
             dgvMonitoring.AutoGenerateColumns = false;
             dgvMonitoring.Columns.Clear();
+
+            // AutoSizeColumnsMode를 Fill로 설정하여 그리드가 부모 컨트롤에 꽉 차게 보이도록 함
+            dgvMonitoring.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
 
             dgvMonitoring.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "StockName",
                 DataPropertyName = "StockName",
                 HeaderText = "종목명",
-                Width = 80
+                FillWeight = 25 // 상대적 너비
             });
-
             dgvMonitoring.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "Status",
                 DataPropertyName = "StatusDisplay",
                 HeaderText = "상태",
-                Width = 80
+                FillWeight = 22
             });
-
             dgvMonitoring.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "CurrentPrice",
                 DataPropertyName = "CurrentPrice",
                 HeaderText = "현재가",
-                Width = 70,
+                FillWeight = 18,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N0" }
             });
-
             dgvMonitoring.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "ProfitLoss",
                 DataPropertyName = "ProfitLoss",
                 HeaderText = "손익",
-                Width = 70,
+                FillWeight = 18,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N0" }
             });
-
             dgvMonitoring.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "ReturnRate",
                 DataPropertyName = "ReturnRate",
                 HeaderText = "수익률",
-                Width = 60,
+                FillWeight = 15,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "P2" }
             });
-
             dgvMonitoring.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "ElapsedTime",
                 DataPropertyName = "ElapsedTimeDisplay",
-                HeaderText = "경과시간",
-                Width = 80
+                HeaderText = "경과",
+                FillWeight = 14
             });
         }
-
+  
         #endregion
 
         #region 🆕 간소화된 이벤트 핸들러
@@ -1082,7 +1080,7 @@ namespace AutoTrader_WinForms
         private void SwitchToTradingMode(bool isRealTrading = false)
         {
             // DataGridView 크기 조정
-            dgvStocks.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            //dgvStocks.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
 
             // 모니터링 패널 표시
             grpMonitoring.Visible = true;
@@ -1499,6 +1497,11 @@ namespace AutoTrader_WinForms
         }
 
         #endregion
+
+        private void grpFilter_Enter(object sender, EventArgs e)
+        {
+
+        }
     }
 
     #region 기존 모니터링 모델

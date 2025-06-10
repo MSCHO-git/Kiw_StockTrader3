@@ -550,6 +550,17 @@ namespace AutoTrader_WinForms.Managers
                         grade = grade
                     }).ToList();
 
+                    // --- 데이터 보정 로직 추가 ---
+                    // 예상 수익률이 1 이상이면 100으로 나눠서 소수점으로 변환
+                    foreach (var stock in stocks)
+                    {
+                        if (stock.ExpectedReturn > 1.0)
+                        {
+                            stock.ExpectedReturn = stock.ExpectedReturn / 100.0;
+                        }
+                    }
+                    // --- 추가 끝 ---
+
                     return stocks;
                 }
             }
