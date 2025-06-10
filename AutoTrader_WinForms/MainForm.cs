@@ -301,17 +301,18 @@ namespace AutoTrader_WinForms
             });
         }
 
-  
+
 
         // MainForm.cs
 
+        // MainForm.cs -> SetupMonitoringGridView 메서드
+
         private void SetupMonitoringGridView()
         {
-            // --- 레이아웃 미세 조정: 컬럼 폭 수정 ---
+            // --- 데이터 표시 방식 개편 ---
             dgvMonitoring.AutoGenerateColumns = false;
             dgvMonitoring.Columns.Clear();
 
-            // AutoSizeColumnsMode를 Fill로 설정하여 그리드가 부모 컨트롤에 꽉 차게 보이도록 함
             dgvMonitoring.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
 
             dgvMonitoring.Columns.Add(new DataGridViewTextBoxColumn
@@ -319,30 +320,30 @@ namespace AutoTrader_WinForms
                 Name = "StockName",
                 DataPropertyName = "StockName",
                 HeaderText = "종목명",
-                FillWeight = 25 // 상대적 너비
+                FillWeight = 24
             });
             dgvMonitoring.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "Status",
                 DataPropertyName = "StatusDisplay",
                 HeaderText = "상태",
-                FillWeight = 22
+                FillWeight = 18
             });
             dgvMonitoring.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "CurrentPrice",
                 DataPropertyName = "CurrentPrice",
                 HeaderText = "현재가",
-                FillWeight = 18,
+                FillWeight = 16,
                 DefaultCellStyle = new DataGridViewCellStyle { Format = "N0" }
             });
             dgvMonitoring.Columns.Add(new DataGridViewTextBoxColumn
             {
                 Name = "ProfitLoss",
-                DataPropertyName = "ProfitLoss",
+                DataPropertyName = "UnrealizedPL",
                 HeaderText = "손익",
                 FillWeight = 18,
-                DefaultCellStyle = new DataGridViewCellStyle { Format = "N0" }
+                DefaultCellStyle = new DataGridViewCellStyle { Format = "N0", ForeColor = Color.Gray }
             });
             dgvMonitoring.Columns.Add(new DataGridViewTextBoxColumn
             {
@@ -354,13 +355,14 @@ namespace AutoTrader_WinForms
             });
             dgvMonitoring.Columns.Add(new DataGridViewTextBoxColumn
             {
-                Name = "ElapsedTime",
-                DataPropertyName = "ElapsedTimeDisplay",
+                Name = "HoldingTime",
+                DataPropertyName = "HoldingMinutesDisplay",
                 HeaderText = "경과",
-                FillWeight = 14
+                FillWeight = 12
             });
         }
-  
+
+    
         #endregion
 
         #region 🆕 간소화된 이벤트 핸들러
@@ -554,7 +556,7 @@ namespace AutoTrader_WinForms
             AddLog("📊 실제 매매 모니터링이 시작되었습니다. (30초마다 업데이트)");
 
             // 첫 번째 매수 시도
-            await ExecuteInitialBuyOrders();
+            //await ExecuteInitialBuyOrders();
         }
 
         /// <summary>
@@ -731,7 +733,7 @@ namespace AutoTrader_WinForms
                     PlannedBuyPrice = stock.BuyPrice,
                     PlannedQuantity = CalculateQuantity(stock.BuyPrice),
                     CurrentPrice = stock.ClosePrice,
-                    Status = PositionStatus.Ready,
+                    Status = PositionStatus.Watching,
                     BuyTime = DateTime.Now,
                     MaxPrice = stock.ClosePrice,
                     MinPrice = stock.ClosePrice
@@ -753,32 +755,7 @@ namespace AutoTrader_WinForms
             return (int)(targetInvestment / price);
         }
 
-        /// <summary>
-        /// 초기 매수 주문 실행
-        /// </summary>
-        private async Task ExecuteInitialBuyOrders()
-        {
-            AddLog("🔵 초기 매수 주문 시작...");
-
-            var readyPositions = realTradingPositions
-                .Where(p => p.Status == PositionStatus.Ready)
-                .OrderByDescending(p => p.Stock.FinalScore)
-                .Take(3) // 처음에는 3개만
-                .ToList();
-
-            foreach (var position in readyPositions)
-            {
-                if (!dailyTradingManager.CanTrade(position.StockCode))
-                {
-                    AddLog($"⚠️ {position.StockName} 거래 제한 (재매수 방지)");
-                    continue;
-                }
-
-                await ExecuteRealBuyOrder(position);
-                await Task.Delay(1000); // 1초 간격
-            }
-        }
-
+       
         /// <summary>
         /// 실제 매수 주문 실행
         /// </summary>
@@ -835,28 +812,26 @@ namespace AutoTrader_WinForms
             }
         }
 
-        /// <summary>
-        /// 실제 매매 타이머 이벤트
-        /// </summary>
+        // MainForm.cs -> RealTradingTimer_Tick 메서드
+
         private async void RealTradingTimer_Tick(object sender, EventArgs e)
         {
-            // [1단계] 대시보드 UI 업데이트 호출 추가
             UpdateStrategyDashboard();
 
             if (!isRealTradingActive) return;
 
             try
             {
-                // 1. 기존 포지션 모니터링
-                await MonitorRealPositions();
+                // 1. [이름 변경] 보유 포지션 매도 신호 감시
+                await MonitorSellSignals();
 
-                // 2. 새로운 매수 기회 탐색
-                await SearchNewBuyOpportunities();
+                // 2. [신규 추가] 매수 감시 종목 모니터링
+                await MonitorBuyOpportunities();
 
                 // 3. UI 업데이트
                 UpdateRealTradingUI();
 
-                // 4. 장 마감 체크 (14:45)
+                // 4. 장 마감 체크
                 if (IsCloseToMarketEnd())
                 {
                     await ForceCloseAllPositions();
@@ -868,10 +843,59 @@ namespace AutoTrader_WinForms
             }
         }
 
+
+
+
+        /// <summary>
+        /// [로직 개선] '매수 감시중'인 종목의 가격을 추적하고 매수 조건 충족 시 주문 실행
+        /// </summary>
+
+        // MainForm.cs -> MonitorBuyOpportunities 메서드
+
+        /// <summary>
+        /// [로직 개선] '매수 감시중'인 종목의 가격을 추적하고 매수 조건 충족 시 주문 실행
+        /// </summary>
+        private async Task MonitorBuyOpportunities()
+        {
+            // 현재 보유 종목 + 매수 진행중인 종목 수가 10개를 넘으면 신규 매수 중단
+            var activePositionCount = realTradingPositions.Count(p => p.Status == PositionStatus.Holding || p.Status == PositionStatus.Buying);
+            if (activePositionCount >= 10) return;
+
+            var watchingPositions = realTradingPositions
+                .Where(p => p.Status == PositionStatus.Watching)
+                .ToList();
+
+            foreach (var position in watchingPositions)
+            {
+                // 현재가 조회
+                int currentPrice = await kiwoomApi.GetCurrentPrice(position.StockCode);
+
+                // 현재가 조회를 성공한 경우에만 로직 실행
+                if (currentPrice > 0)
+                {
+                    position.CurrentPrice = currentPrice; // 현재가 정보 업데이트
+
+                    // 매수 조건 확인: 현재가가 계획된 매수가보다 낮거나 같으면 매수 시도
+                    if (currentPrice <= position.PlannedBuyPrice)
+                    {
+                        AddLog($"🎯 매수 조건 포착: {position.StockName} (현재가: {currentPrice:N0} <= 매수가: {position.PlannedBuyPrice:N0})");
+                        await ExecuteRealBuyOrder(position);
+                    }
+                }
+
+                // --- 최종 수정: 루프 마지막에서 항상 지연을 주어 API 요청 속도를 조절합니다. ---
+                // 이렇게 하면 현재가 조회든, 매수 주문이든 모든 API 호출 사이에 최소 간격이 보장됩니다.
+                await Task.Delay(300); // 0.3초의 지연 (초당 약 3회 요청)
+            }
+        }
+
+      
+
+
         /// <summary>
         /// 실제 포지션 모니터링
         /// </summary>
-        private async Task MonitorRealPositions()
+        private async Task MonitorSellSignals()
         {
             var holdingPositions = realTradingPositions
                 .Where(p => p.Status == PositionStatus.Holding)
@@ -948,27 +972,7 @@ namespace AutoTrader_WinForms
             }
         }
 
-        /// <summary>
-        /// 새로운 매수 기회 탐색
-        /// </summary>
-        private async Task SearchNewBuyOpportunities()
-        {
-            var holdingCount = realTradingPositions.Count(p => p.Status == PositionStatus.Holding);
-            if (holdingCount >= 10) return; // 최대 10개 보유
-
-            var readyPositions = realTradingPositions
-                .Where(p => p.Status == PositionStatus.Ready)
-                .Where(p => dailyTradingManager.CanTrade(p.StockCode))
-                .OrderByDescending(p => p.Stock.FinalScore)
-                .Take(1) // 한 번에 하나씩
-                .ToList();
-
-            foreach (var position in readyPositions)
-            {
-                await ExecuteRealBuyOrder(position);
-                break; // 하나만 실행
-            }
-        }
+       
 
         /// <summary>
         /// 강제 청산 (14:45 이후)
@@ -1002,38 +1006,45 @@ namespace AutoTrader_WinForms
         /// <summary>
         /// 실제 매매 UI 업데이트
         /// </summary>
+        // MainForm.cs -> UpdateRealTradingUI 메서드
+
+        /// <summary>
+        /// [개편] 실제 매매 UI 업데이트
+        /// </summary>
         private void UpdateRealTradingUI()
         {
-            if (realTradingPositions == null || realTradingPositions.Count == 0) return;
-
-            // 기존 모니터링 UI를 실제 매매 데이터로 업데이트
-            var displayPositions = realTradingPositions.Select(rp => new TradingPosition
+            if (this.InvokeRequired)
             {
-                Stock = rp.Stock,
-                InvestmentAmount = rp.InvestmentAmount,
-                BuyPrice = rp.ActualAvgBuyPrice > 0 ? rp.ActualAvgBuyPrice : rp.PlannedBuyPrice,
-                TargetPrice = rp.Stock.SellPrice,
-                CurrentPrice = rp.CurrentPrice,
-                Quantity = rp.ActualQuantity > 0 ? rp.ActualQuantity : rp.PlannedQuantity,
-                Status = rp.Status,
-                StartTime = rp.BuyTime,
-                EndTime = rp.SellTime
-            }).ToList();
+                this.Invoke(new Action(UpdateRealTradingUI));
+                return;
+            }
 
+            if (realTradingPositions == null) return;
+
+            // 이제 더 이상 중간 변환 과정 없이, 실제 데이터 모델을 그리드에 바로 연결합니다.
             dgvMonitoring.DataSource = null;
-            dgvMonitoring.DataSource = displayPositions;
+            dgvMonitoring.DataSource = realTradingPositions;
 
-            // 통계 업데이트
-            var totalInvestment = realTradingPositions.Sum(p => p.InvestmentAmount);
-            var totalProfit = realTradingPositions.Sum(p => p.UnrealizedPL);
-            var dailyRealized = dailyTradingManager.DailyRealized;
+            // 상단 통계 레이블 업데이트
+            var holdingPositions = realTradingPositions.Where(p => p.Status == PositionStatus.Holding).ToList();
 
+            var totalInvestment = holdingPositions.Sum(p => p.InvestmentAmount);
+            var totalUnrealizedPL = holdingPositions.Sum(p => p.UnrealizedPL);
+            var dailyRealizedPL = dailyTradingManager.DailyRealized;
+
+            double totalReturnRate = (totalInvestment > 0) ? (double)(totalUnrealizedPL / totalInvestment) : 0.0;
+
+            // --- 레이블 의미에 맞게 내용 수정 ---
             lblTotalInvestment.Text = $"💰 투자금액: {totalInvestment:N0}원";
-            lblCurrentProfit.Text = $"📈 현재수익: {totalProfit:+#,0;-#,0;0}원";
-            lblReturnRate.Text = $"📊 실현손익: {dailyRealized:+#,0;-#,0;0}원";
-            lblProgress.Text = $"🎯 거래: {dailyTradingManager.TradingCount}회";
+            lblCurrentProfit.Text = $"📈 평가손익: {totalUnrealizedPL:+#,0;-#,0;0}원 ({totalReturnRate:P2})";
+            lblReturnRate.Text = $"📊 실현손익: {dailyRealizedPL:+#,0;-#,0;0}원";
+            lblProgress.Text = $"🎯 거래: {dailyTradingManager.TradingCount}회 (보유: {holdingPositions.Count})";
+
+            lblCurrentProfit.ForeColor = totalUnrealizedPL >= 0 ? Color.Maroon : Color.Navy;
+            lblReturnRate.ForeColor = dailyRealizedPL >= 0 ? Color.Maroon : Color.Navy;
         }
 
+      
         /// <summary>
         /// 실제 매매 결과 표시
         /// </summary>

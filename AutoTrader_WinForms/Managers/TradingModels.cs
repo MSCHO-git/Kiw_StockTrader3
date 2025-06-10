@@ -207,6 +207,12 @@ namespace AutoTrader_WinForms.Managers
     /// <summary>
     /// 실제 매매용 포지션
     /// </summary>
+
+    // TradingModels.cs -> RealTradingPosition 클래스
+
+    /// <summary>
+    /// 실제 매매용 포지션
+    /// </summary>
     public class RealTradingPosition
     {
         public string StockCode { get; set; }
@@ -228,17 +234,46 @@ namespace AutoTrader_WinForms.Managers
 
         public DateTime BuyTime { get; set; }
         public DateTime? SellTime { get; set; }
-        public int HoldingMinutes => (int)(DateTime.Now - BuyTime).TotalMinutes;
 
         public PositionStatus Status { get; set; }
 
-        public decimal UnrealizedPL => ActualQuantity > 0 ?
-            (CurrentPrice - ActualAvgBuyPrice) * ActualQuantity : 0;
+        // --- 여기부터 UI 표시용 계산 속성들 ---
 
-        public double ReturnRate => ActualAvgBuyPrice > 0 ?
-            (double)(CurrentPrice - ActualAvgBuyPrice) / ActualAvgBuyPrice : 0;
+        public decimal UnrealizedPL => ActualQuantity > 0 ? (decimal)(CurrentPrice - ActualAvgBuyPrice) * ActualQuantity : 0;
 
-        public decimal InvestmentAmount => ActualAvgBuyPrice * ActualQuantity;
+        public double ReturnRate => ActualAvgBuyPrice > 0 ? (double)(CurrentPrice - ActualAvgBuyPrice) / ActualAvgBuyPrice : 0;
+
+        public decimal InvestmentAmount => (decimal)ActualAvgBuyPrice * ActualQuantity;
+
+        public string StatusDisplay
+        {
+            get
+            {
+                switch (Status)
+                {
+                    case PositionStatus.Watching: return "🔍 감시중";
+                    case PositionStatus.Buying: return "🟡 매수중";
+                    case PositionStatus.Holding: return "🟢 보유중";
+                    case PositionStatus.Selling: return "🔵 매도중";
+                    case PositionStatus.Completed: return "⚫ 완료";
+                    case PositionStatus.Cancelled: return "⚪ 취소";
+                    default: return "⚪ 대기";
+                }
+            }
+        }
+
+        public string HoldingMinutesDisplay
+        {
+            get
+            {
+                if (Status != PositionStatus.Holding && Status != PositionStatus.Selling) return "-";
+                var elapsed = (SellTime ?? DateTime.Now) - BuyTime;
+                if (elapsed.TotalMinutes < 60)
+                    return $"{Math.Round(elapsed.TotalMinutes)}분";
+                else
+                    return $"{elapsed.Hours}시간 {elapsed.Minutes}분";
+            }
+        }
 
         public SellSignal CheckSellSignal()
         {
@@ -255,19 +290,23 @@ namespace AutoTrader_WinForms.Managers
             if (CurrentPrice <= ActualAvgBuyPrice * 0.95)
                 return SellSignal.EmergencyExit;
 
-            if (HoldingMinutes > 180)
+            var holdingMinutes = (DateTime.Now - BuyTime).TotalMinutes;
+            if (holdingMinutes > 180)
                 return SellSignal.TimeLimit;
 
             return SellSignal.Hold;
         }
     }
 
+
+  
     /// <summary>
     /// 포지션 상태
     /// </summary>
     public enum PositionStatus
     {
         Ready,
+        Watching,
         Buying,
         Holding,
         ProfitTaken,
