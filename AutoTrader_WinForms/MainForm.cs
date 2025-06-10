@@ -391,7 +391,8 @@ namespace AutoTrader_WinForms
                 currentStocks = DatabaseManager.GetTopGradeStocks(latestDate);
 
                 // 🆕 S급 종목 자동 선택
-                AutoSelectSGradeStocks();
+               
+                AutoSelectTopPriorityStocks();
 
                 AddLog($"🎯 로드 완료: 총 {currentStocks.Count}개 종목 (S급: {currentStocks.Count(s => s.FinalGrade == "S")}개, A급: {currentStocks.Count(s => s.FinalGrade == "A")}개)");
 
@@ -411,11 +412,22 @@ namespace AutoTrader_WinForms
             }
         }
 
+        // MainForm.cs -> btnStartTrading_Click 메서드
+
         /// <summary>
-        /// 🆕 매매 시작 (키움 연결 상태 자동 체크)
+        /// 🆕 매매 시작 (키움 연결 및 장 마감 시간 자동 체크)
         /// </summary>
         private async void btnStartTrading_Click(object sender, EventArgs e)
         {
+            // --- 장 마감 시간 체크 로직 추가 ---
+            if (IsCloseToMarketEnd())
+            {
+                MessageBox.Show("이미 장이 마감되었거나 마감 15분 전입니다.\n신규 매매를 시작할 수 없습니다.",
+                                "매매 시간 확인", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            // --- 추가 끝 ---
+
             if (currentStocks == null || currentStocks.Count == 0)
             {
                 AddLog("⚠️ 먼저 분석 데이터를 로드해주세요.");
@@ -432,45 +444,32 @@ namespace AutoTrader_WinForms
                 return;
             }
 
-            // 🆕 키움 연결 상태 자동 체크
+            // 키움 연결 상태 자동 체크
             if (!isKiwoomConnected)
             {
                 AddLog("🔐 키움증권 연결이 필요합니다. 자동으로 연결을 시도합니다...");
-
-                // 키움 연결 시도
                 bool loginSuccess = await TryKiwoomLogin();
 
                 if (!loginSuccess)
                 {
                     var result = MessageBox.Show(
-                        "키움증권 연결에 실패했습니다.\n\n" +
-                        "시뮬레이션 모드로 진행하시겠습니까?",
-                        "연결 실패",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
+                        "키움증권 연결에 실패했습니다.\n\n시뮬레이션 모드로 진행하시겠습니까?",
+                        "연결 실패", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
-                    if (result != DialogResult.Yes)
-                    {
-                        return; // 사용자가 취소
-                    }
+                    if (result != DialogResult.Yes) return;
                 }
             }
 
-            // 매매 모드 확인 및 시작
+            // 매매 모드 확인 및 시작 (기존 코드와 동일)
             string modeText = isKiwoomConnected ? "실제 매매" : "시뮬레이션";
             string warningText = isKiwoomConnected ?
                 "⚠️ 실제 계좌에서 매매가 실행됩니다! (모의투자)" :
                 "ℹ️ 시뮬레이션 모드로 실행됩니다.";
-
-            string cashInfo = isKiwoomConnected ?
-                $"사용 가능 금액: {kiwoomApi.AvailableCash:N0}원\n" : "";
+            string cashInfo = isKiwoomConnected ? $"사용 가능 금액: {kiwoomApi.AvailableCash:N0}원\n" : "";
 
             var confirmResult = MessageBox.Show(
                 $"{modeText}를 시작하시겠습니까?\n\n" +
-                $"선택 종목: {selectedStocks.Count}개\n" +
-                $"대상 종목: {string.Join(", ", selectedStocks.Take(3).Select(s => s.StockName))}" +
-                (selectedStocks.Count > 3 ? "..." : "") + "\n" +
-                cashInfo + "\n" +
+                $"선택 종목: {selectedStocks.Count}개\n\n" +
                 warningText,
                 $"{modeText} 시작 확인",
                 MessageBoxButtons.YesNo,
@@ -489,6 +488,8 @@ namespace AutoTrader_WinForms
             }
         }
 
+
+    
         /// <summary>
         /// 🆕 키움 로그인 시도
         /// </summary>
@@ -1122,7 +1123,7 @@ namespace AutoTrader_WinForms
         private void SwitchToSelectionMode()
         {
             // DataGridView 크기 복원
-            dgvStocks.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            //dgvStocks.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 
             // 모니터링 패널 숨김
             grpMonitoring.Visible = false;
@@ -1394,6 +1395,12 @@ namespace AutoTrader_WinForms
         /// <summary>
         /// 키움 연결 상태 UI 업데이트
         /// </summary>
+
+        // 파일: AutoTrader_WinForms/MainForm.cs
+
+        /// <summary>
+        /// 키움 연결 상태 UI 업데이트
+        /// </summary>
         private void UpdateKiwoomStatus()
         {
             if (isKiwoomConnected && kiwoomApi != null)
@@ -1406,16 +1413,23 @@ namespace AutoTrader_WinForms
                 lblAccountInfo.Text = $"계좌: {kiwoomApi.CurrentAccount} | 예수금: {kiwoomApi.AvailableCash:N0}원";
                 lblAccountInfo.ForeColor = Color.Blue;
 
-                // 계좌 선택 콤보박스 활성화 (여러 계좌가 있는 경우)
-                if (kiwoomApi.AccountList.Count > 1)
+                // 계좌 선택 콤보박스 활성화 (계좌가 1개 이상 있는 경우)
+                if (kiwoomApi.AccountList.Count > 0)
                 {
                     cmbAccount.Enabled = true;
+
+                    // --- 무한 루프 방지 코드 추가 ---
+                    cmbAccount.SelectedIndexChanged -= cmbAccount_SelectedIndexChanged; // 1. 이벤트 핸들러 연결 임시 해제
+
                     cmbAccount.Items.Clear();
                     foreach (string account in kiwoomApi.AccountList)
                     {
                         cmbAccount.Items.Add(account);
                     }
                     cmbAccount.SelectedItem = kiwoomApi.CurrentAccount;
+
+                    cmbAccount.SelectedIndexChanged += cmbAccount_SelectedIndexChanged; // 2. 이벤트 핸들러 다시 연결
+                                                                                        // --- 추가 끝 ---
                 }
                 else
                 {
@@ -1433,32 +1447,19 @@ namespace AutoTrader_WinForms
             }
         }
 
+      
         /// <summary>
-        /// 로그 메시지 추가
+        /// 우선순위가 높은 종목들(1, 2순위)을 자동으로 선택합니다.
         /// </summary>
-        public void AddLog(string message)
-        {
-            if (this.InvokeRequired)
-            {
-                this.Invoke(new Action<string>(AddLog), message);
-                return;
-            }
-
-            string timestamp = DateTime.Now.ToString("HH:mm:ss");
-            txtLog.AppendText($"[{timestamp}] {message}\r\n");
-            txtLog.ScrollToCaret();
-        }
-
-        /// <summary>
-        /// S급 종목들 자동 선택
-        /// </summary>
-        private void AutoSelectSGradeStocks()
+        private void AutoSelectTopPriorityStocks()
         {
             if (currentStocks == null) return;
 
             int selectedCount = 0;
             foreach (var stock in currentStocks)
             {
+                // BuyPriority 속성이 아직 없으므로, 우선 S등급만 선택하도록 임시 수정합니다.
+                // 나중에 2단계 UI 개선 시 이 로직을 다시 완성하겠습니다.
                 if (stock.FinalGrade == "S")
                 {
                     stock.IsSelected = true;
@@ -1466,12 +1467,46 @@ namespace AutoTrader_WinForms
                 }
                 else
                 {
-                    stock.IsSelected = false; // A급은 체크 해제
+                    stock.IsSelected = false;
                 }
             }
 
-            AddLog($"✅ S급 {selectedCount}개 종목 자동 선택됨");
+            AddLog($"✅ S등급 {selectedCount}개 종목 자동 선택됨");
         }
+
+        /// <summary>
+        /// 로그 메시지 추가 (스레드 안전 및 예외 처리 강화)
+        /// </summary>
+        public void AddLog(string message)
+        {
+       //     try
+       //     {
+       //         // 다른 스레드에서 호출된 경우, UI 스레드에서 실행하도록 위임
+       //         if (this.InvokeRequired)
+      //          {
+       //             // 이 방식이 더 안전하며 무한 재귀(StackOverflowException)를 방지합니다.
+       //             this.Invoke(new Action(() => AddLog(message)));
+        //            return;
+       //         }
+
+                // 이제 이 코드는 항상 UI 스레드에서 실행됨
+                // 폼이 닫히는 중일 때 발생하는 오류(ObjectDisposedException)를 방지하는 방어 코드
+       //         if (txtLog.IsDisposed || txtLog.Disposing)
+       //         {
+       //             return;
+       //         }
+
+       //         string timestamp = DateTime.Now.ToString("HH:mm:ss");
+       //         txtLog.AppendText($"[{timestamp}] {message}\r\n");
+       //         txtLog.ScrollToCaret();
+       //     }
+       //     catch (Exception ex)
+       //     {
+       //         // AddLog 자체에서 오류가 발생할 경우, 디버그 콘솔에만 출력하여 전체 프로그램이 멈추지 않도록 함
+       //         System.Diagnostics.Debug.WriteLine($"AddLog Error: {ex.Message}");
+      //      }
+        }
+
 
         #endregion
 
@@ -1510,6 +1545,11 @@ namespace AutoTrader_WinForms
         #endregion
 
         private void grpFilter_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void grpStatistics_Enter(object sender, EventArgs e)
         {
 
         }

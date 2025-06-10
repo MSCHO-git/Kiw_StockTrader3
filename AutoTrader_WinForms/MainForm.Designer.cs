@@ -1,4 +1,5 @@
-﻿namespace AutoTrader_WinForms
+﻿// 수정된 MainForm.Designer.cs 파일 전체 코드
+namespace AutoTrader_WinForms
 {
     partial class MainForm
     {
@@ -495,7 +496,8 @@
             // 
             this.mainSplitContainer.Panel2.Controls.Add(this.grpMonitoring);
             this.mainSplitContainer.Size = new System.Drawing.Size(1372, 445);
-            this.mainSplitContainer.SplitterDistance = 790;
+            // --- 레이아웃 미세 조정 ---
+            this.mainSplitContainer.SplitterDistance = 800; // 왼쪽 패널 너비 조정
             this.mainSplitContainer.TabIndex = 6;
             // 
             // dgvStocks
@@ -510,7 +512,7 @@
             this.dgvStocks.RowHeadersVisible = false;
             this.dgvStocks.RowHeadersWidth = 82;
             this.dgvStocks.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvStocks.Size = new System.Drawing.Size(646, 441);
+            this.dgvStocks.Size = new System.Drawing.Size(796, 441);
             this.dgvStocks.TabIndex = 3;
             this.dgvStocks.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvStocks_CellContentClick);
             this.dgvStocks.CellFormatting += new System.Windows.Forms.DataGridViewCellFormattingEventHandler(this.dgvStocks_CellFormatting);
@@ -526,7 +528,7 @@
             this.grpMonitoring.Dock = System.Windows.Forms.DockStyle.Fill;
             this.grpMonitoring.Location = new System.Drawing.Point(0, 0);
             this.grpMonitoring.Name = "grpMonitoring";
-            this.grpMonitoring.Size = new System.Drawing.Size(714, 441);
+            this.grpMonitoring.Size = new System.Drawing.Size(568, 441);
             this.grpMonitoring.TabIndex = 4;
             this.grpMonitoring.TabStop = false;
             this.grpMonitoring.Text = "실시간 매매 모니터링";
@@ -547,7 +549,7 @@
             this.dgvMonitoring.RowHeadersVisible = false;
             this.dgvMonitoring.RowHeadersWidth = 82;
             this.dgvMonitoring.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvMonitoring.Size = new System.Drawing.Size(692, 350);
+            this.dgvMonitoring.Size = new System.Drawing.Size(546, 350);
             this.dgvMonitoring.TabIndex = 25;
             // 
             // lblProgress
@@ -555,43 +557,41 @@
             this.lblProgress.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.lblProgress.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold);
             this.lblProgress.ForeColor = System.Drawing.Color.Blue;
-            this.lblProgress.Location = new System.Drawing.Point(359, 58);
+            this.lblProgress.Location = new System.Drawing.Point(286, 58);
             this.lblProgress.Name = "lblProgress";
-            this.lblProgress.Size = new System.Drawing.Size(343, 14);
+            this.lblProgress.Size = new System.Drawing.Size(270, 14);
             this.lblProgress.TabIndex = 24;
             this.lblProgress.Text = "🎯 진행률: 0/0 완료";
+            this.lblProgress.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // lblReturnRate
             // 
-            this.lblReturnRate.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.lblReturnRate.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold);
             this.lblReturnRate.ForeColor = System.Drawing.Color.Green;
             this.lblReturnRate.Location = new System.Drawing.Point(10, 58);
             this.lblReturnRate.Name = "lblReturnRate";
-            this.lblReturnRate.Size = new System.Drawing.Size(326, 14);
+            this.lblReturnRate.Size = new System.Drawing.Size(258, 14);
             this.lblReturnRate.TabIndex = 23;
-            this.lblReturnRate.Text = "📊 수익률: +0.0%";
+            this.lblReturnRate.Text = "📊 실현손익: +0원";
             // 
             // lblCurrentProfit
             // 
             this.lblCurrentProfit.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.lblCurrentProfit.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold);
             this.lblCurrentProfit.ForeColor = System.Drawing.Color.Green;
-            this.lblCurrentProfit.Location = new System.Drawing.Point(359, 39);
+            this.lblCurrentProfit.Location = new System.Drawing.Point(286, 39);
             this.lblCurrentProfit.Name = "lblCurrentProfit";
-            this.lblCurrentProfit.Size = new System.Drawing.Size(343, 14);
+            this.lblCurrentProfit.Size = new System.Drawing.Size(270, 14);
             this.lblCurrentProfit.TabIndex = 22;
-            this.lblCurrentProfit.Text = "📈 현재수익: +0원";
+            this.lblCurrentProfit.Text = "📈 평가손익: +0원 (0.00%)";
+            this.lblCurrentProfit.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // lblTotalInvestment
             // 
-            this.lblTotalInvestment.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.lblTotalInvestment.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold);
             this.lblTotalInvestment.Location = new System.Drawing.Point(10, 39);
             this.lblTotalInvestment.Name = "lblTotalInvestment";
-            this.lblTotalInvestment.Size = new System.Drawing.Size(326, 14);
+            this.lblTotalInvestment.Size = new System.Drawing.Size(258, 14);
             this.lblTotalInvestment.TabIndex = 21;
             this.lblTotalInvestment.Text = "💰 투자금액: 0원";
             // 
@@ -603,7 +603,7 @@
             this.lblMonitoringTitle.ForeColor = System.Drawing.Color.DarkBlue;
             this.lblMonitoringTitle.Location = new System.Drawing.Point(10, 16);
             this.lblMonitoringTitle.Name = "lblMonitoringTitle";
-            this.lblMonitoringTitle.Size = new System.Drawing.Size(692, 16);
+            this.lblMonitoringTitle.Size = new System.Drawing.Size(546, 16);
             this.lblMonitoringTitle.TabIndex = 20;
             this.lblMonitoringTitle.Text = "📊 매매 현황 (0개 선택)";
             this.lblMonitoringTitle.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -639,7 +639,6 @@
             this.grpMonitoring.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dgvMonitoring)).EndInit();
             this.ResumeLayout(false);
-
         }
 
         #endregion
